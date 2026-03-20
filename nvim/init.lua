@@ -170,19 +170,16 @@ vim.keymap.set('i', '<A-10>','<C-\\><C-o>10gt', { noremap = true })
 
 vim.cmd.colorscheme('elflord')
 
-local openCmdOutInBuffer=function(opts)
-  --local filePath="/tmp/output.txt"
-  --vim.cmd("sil !touch ".. filePath)
-  --vim.cmd("redi! > " .. filePath)
-  --vim.cmd("sil !touch " .. opts.fargs[1] )
-  --vim.cmd("redi END")
-  --vim.cmd("tabedit " .. filePath)
-  --
-  vim.cmd("tabnew | put =execute('" .. opts.fargs[1] .. "')")
+local openCmdOutInBuffer = function(opts)
+  local output = vim.fn.execute(opts.fargs[1])
+  vim.cmd("tabnew")
+  vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(output, "\n"))
 end
 
-vim.api.nvim_create_user_command("Cob",openCmdOutInBuffer,{desc="Open a command output in a new buffer",nargs=1});
-
+vim.api.nvim_create_user_command("Cob", openCmdOutInBuffer, {
+  desc = "Open a command output in a new buffer",
+  nargs = 1
+})
 
 -- PLUGINS
 require("lazy").setup({
@@ -215,7 +212,7 @@ require("lazy").setup({
           local builtin = require('telescope.builtin')
           vim.keymap.set('n', '<leader>ff', builtin.find_files, { desc = 'Telescope find files' })
           vim.keymap.set('n', '<leader>fg', builtin.live_grep, { desc = 'Telescope live grep' })
-          vim.keymap.set('n', '<leader>bf', builtin.buffers, { desc = 'Telescope buffers' })
+          vim.keymap.set('n', '<leader>fb', builtin.buffers, { desc = 'Telescope buffers' })
           vim.keymap.set('n', '<leader>fh', builtin.help_tags, { desc = 'Telescope help tags' })
         end	
       },
@@ -226,8 +223,20 @@ require("lazy").setup({
           -- install jsregexp (optional!).
           build = "make install_jsregexp"
         },
-
-
+        {
+          "nvim-tree/nvim-tree.lua",
+          version = "*",
+          lazy = false,
+          dependencies = {
+            "nvim-tree/nvim-web-devicons",
+          },
+          config = function()
+            local config={
+              hijack_netrw=false
+            }
+            require("nvim-tree").setup(config)
+          end,
+        },
       ---@type LazySpec
       {
         "mikavilpas/yazi.nvim",
@@ -239,19 +248,19 @@ require("lazy").setup({
         keys = {
           -- 👇 in this section, choose your own keymappings!
           {
-            "<leader>-",
+            "<leader>e.",
             mode = { "n", "v" },
             "<cmd>Yazi<cr>",
             desc = "Open yazi at the current file",
           },
           {
             -- Open in the current working directory
-            "<leader>cw",
+            "<leader>ew",
             "<cmd>Yazi cwd<cr>",
             desc = "Open the file manager in nvim's working directory",
           },
           {
-            "<c-up>",
+            "<leader>er",
             "<cmd>Yazi toggle<cr>",
             desc = "Resume the last yazi session",
           },
@@ -272,7 +281,6 @@ require("lazy").setup({
           vim.g.loaded_netrwPlugin = 1
         end,
       },
-
       {
         "neovim/nvim-lspconfig",
       },
@@ -289,23 +297,31 @@ require("lazy").setup({
         }
       },
       {
-        {
-          "mason-org/mason-lspconfig.nvim",
-          opts = {},
-          dependencies = {
-            { "mason-org/mason.nvim", opts = {} },
-            "neovim/nvim-lspconfig",
-          },
-        }
-
-      },
-      {
         'nvim-treesitter/nvim-treesitter',
         lazy = false,
         build = ':TSUpdate'
       },
       {
+          "mason-org/mason-lspconfig.nvim",
+          opts = {
+            ensure_installed = { "lua_ls","bashls","dockerls", "yamlls" },
+            automatic_enable = {
+             exclude = { "lua_ls","bashls","dockerls","yamlls"}
+           }
+          },
+          dependencies = {
+            { "mason-org/mason.nvim", opts = {} },
+            "neovim/nvim-lspconfig",
+          },
+        },
+      {
         'vimpostor/vim-tpipeline'
+
+      }
+      ,
+      
+      {
+        "mfussenegger/nvim-jdtls"
 
       }
 
@@ -338,4 +354,51 @@ smap <silent><expr> <C-E> luasnip#choice_active() ? '<Plug>luasnip-next-choice' 
 require("luasnip.loaders.from_lua").load({paths = "~/.config/nvim/LuaSnip/"})
 
 
+--- TREESITTER
+require'nvim-treesitter'.install { 'yaml','bash' }
+
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = { 'yaml' },
+  callback = function() vim.treesitter.start() end,
+})
+
+
+
+--- LSP
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = { 'lua' },
+  callback = function() vim.lsp.enable('lua_ls') end,
+})
+
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = { 'bash','sh' },
+  callback = function() 
+    vim.lsp.enable('bashls')
+    vim.lsp.enable('shellcheck')
+
+  end,
+})
+
+
+
+vim.lsp.config("jdtls", {
+  settings = {
+    java = {
+        -- Custom eclipse.jdt.ls options go here
+    },
+  },
+})
+vim.lsp.enable("jdtls")
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = { 'java' },
+  callback = function()
+    require('jdtls').start_or_attach({})
+  end,
+})
+
+
+--- ENVIRONMENT VARIABLES
+vim.env.lazy="/home/julio/.local/share/nvim/mason"
+vim.env.obs="/home/julio/Documents/COMP"
+vim.env.pdg="/home/julio/Documents/COMP/PDG"
 
