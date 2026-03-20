@@ -1,0 +1,10 @@
+[tools]
+go = "latest"
+gradle = "8.10.1"
+java = "21"
+lua = "latest"
+neovim = "latest"
+node = "20"
+opencode = "latest"
+python = "3.9.0"
+tmux = "latest"
